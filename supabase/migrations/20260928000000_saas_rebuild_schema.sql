@@ -1,41 +1,57 @@
 -- ============================================================================
--- AI E-commerce OS — full schema rebuild
--- Replaces the previous bakery ordering schema with the SaaS product schema.
+-- Launchstack — AI E-commerce OS — full schema
 -- No AI API tables/columns: this system stores rules, templates and profiles
 -- only. All "personalization" happens client-side via deterministic rules.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- 1. Drop the old bakery-ordering schema
+-- 0. Foundations: roles and a shared updated_at trigger function
 -- ----------------------------------------------------------------------------
-drop trigger if exists on_auth_user_created on auth.users;
-drop trigger if exists trigger_generate_order_number on public.orders;
-drop trigger if exists update_products_updated_at on public.products;
-drop trigger if exists update_orders_updated_at on public.orders;
-drop trigger if exists update_calendar_settings_updated_at on public.calendar_settings;
-drop trigger if exists update_profiles_updated_at on public.profiles;
+create type public.app_role as enum ('admin', 'user');
 
-drop table if exists public.orders cascade;
-drop table if exists public.products cascade;
-drop table if exists public.categories cascade;
-drop table if exists public.customization_options cascade;
-drop table if exists public.blocked_dates cascade;
-drop table if exists public.calendar_settings cascade;
-drop table if exists public.delivery_zones cascade;
-drop table if exists public.profiles cascade;
+create table public.user_roles (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid references auth.users(id) on delete cascade not null,
+    role public.app_role not null default 'user',
+    unique (user_id, role)
+);
 
-drop function if exists public.generate_order_number() cascade;
-drop function if exists public.handle_new_user() cascade;
+alter table public.user_roles enable row level security;
 
-drop type if exists public.order_status cascade;
-drop type if exists public.delivery_type cascade;
+create or replace function public.has_role(_user_id uuid, _role public.app_role)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+    select exists (
+        select 1
+        from public.user_roles
+        where user_id = _user_id
+          and role = _role
+    )
+$$;
 
--- Keep public.app_role, public.user_roles and public.has_role() — same
--- auth/role pattern is reused for the new product (admin vs user).
--- Keep public.update_updated_at_column() — reused below.
+create policy "Admins can view all roles" on public.user_roles
+    for select using (public.has_role(auth.uid(), 'admin'));
+create policy "Admins can manage roles" on public.user_roles
+    for all using (public.has_role(auth.uid(), 'admin'));
+
+create or replace function public.update_updated_at_column()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    new.updated_at = now();
+    return new;
+end;
+$$;
 
 -- ----------------------------------------------------------------------------
--- 2. profiles — one row per auth user (plan / billing cache lives here)
+-- 1. profiles — one row per auth user (plan / billing cache lives here)
 -- ----------------------------------------------------------------------------
 create table public.profiles (
     id uuid primary key default gen_random_uuid(),
@@ -69,7 +85,7 @@ create trigger update_profiles_updated_at before update on public.profiles
     for each row execute function public.update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 3. business_profiles — the questionnaire output, one per user
+-- 2. business_profiles — the questionnaire output, one per user
 -- ----------------------------------------------------------------------------
 create table public.business_profiles (
     id uuid primary key default gen_random_uuid(),
@@ -127,7 +143,7 @@ create trigger update_business_profiles_updated_at before update on public.busin
     for each row execute function public.update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 4. modules — the 12 workspace categories (Product Research, Meta Ads, ...)
+-- 3. modules — the 12 workspace categories (Product Research, Meta Ads, ...)
 -- ----------------------------------------------------------------------------
 create table public.modules (
     id uuid primary key default gen_random_uuid(),
@@ -152,7 +168,7 @@ create trigger update_modules_updated_at before update on public.modules
     for each row execute function public.update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 5. prompt_templates — the personalized-prompt content, admin editable
+-- 4. prompt_templates — the personalized-prompt content, admin editable
 -- ----------------------------------------------------------------------------
 create table public.prompt_templates (
     id uuid primary key default gen_random_uuid(),
@@ -191,7 +207,7 @@ create trigger update_prompt_templates_updated_at before update on public.prompt
 create index prompt_templates_module_id_idx on public.prompt_templates(module_id);
 
 -- ----------------------------------------------------------------------------
--- 6. workflows & workflow_steps — guided multi-prompt sequences
+-- 5. workflows & workflow_steps — guided multi-prompt sequences
 -- ----------------------------------------------------------------------------
 create table public.workflows (
     id uuid primary key default gen_random_uuid(),
@@ -240,7 +256,7 @@ create policy "Admins can manage workflow steps" on public.workflow_steps
 create index workflow_steps_workflow_id_idx on public.workflow_steps(workflow_id);
 
 -- ----------------------------------------------------------------------------
--- 7. favorites, prompt_history, workflow_step_progress — per-user activity
+-- 6. favorites, prompt_history, workflow_step_progress — per-user activity
 -- ----------------------------------------------------------------------------
 create table public.favorites (
     id uuid primary key default gen_random_uuid(),
@@ -288,7 +304,7 @@ create policy "Users can manage their own workflow progress" on public.workflow_
     for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- ----------------------------------------------------------------------------
--- 8. subscriptions — Stripe event log (webhook writes via service role)
+-- 7. subscriptions — Stripe event log (webhook writes via service role)
 -- ----------------------------------------------------------------------------
 create table public.subscriptions (
     id uuid primary key default gen_random_uuid(),
@@ -317,7 +333,7 @@ create trigger update_subscriptions_updated_at before update on public.subscript
     for each row execute function public.update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 9. New-user bootstrap: create profiles row on signup
+-- 8. New-user bootstrap: create profiles row on signup
 -- ----------------------------------------------------------------------------
 create or replace function public.handle_new_user()
 returns trigger

@@ -15,15 +15,15 @@ import {
 } from "@/components/onboarding/schema";
 import { StepBusiness } from "@/components/onboarding/steps/StepBusiness";
 import { StepProduct } from "@/components/onboarding/steps/StepProduct";
-import { StepCustomer } from "@/components/onboarding/steps/StepCustomer";
 import { StepAcquisition } from "@/components/onboarding/steps/StepAcquisition";
-import { StepGoals } from "@/components/onboarding/steps/StepGoals";
+import { StepMoreDetails } from "@/components/onboarding/steps/StepMoreDetails";
 import { useSaveBusinessProfile, useBusinessProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { APP_NAME } from "@/config/app";
+import { savePendingProfile } from "@/lib/pendingBusinessProfile";
 import { toast } from "sonner";
 
-const steps = [StepBusiness, StepProduct, StepCustomer, StepAcquisition, StepGoals];
+const steps = [StepBusiness, StepProduct, StepAcquisition, StepMoreDetails];
 
 export default function Onboarding() {
   const [screen, setScreen] = useState<"intro" | number>("intro");
@@ -48,25 +48,25 @@ export default function Onboarding() {
     hasInitialized.current = true;
     form.reset({
       business_type: existingProfile.business_type ?? "",
+      primary_goal: existingProfile.primary_goal ?? "",
+      monthly_revenue: existingProfile.monthly_revenue ?? "",
+      niche: existingProfile.niche ?? "",
+      product: existingProfile.product ?? "",
+      average_price: existingProfile.average_price ?? "",
+      acquisition_channels: existingProfile.acquisition_channels ?? [],
+      main_problem: existingProfile.main_problem ?? "",
       target_country: existingProfile.target_country ?? "",
       target_language: existingProfile.target_language ?? "",
-      monthly_revenue: existingProfile.monthly_revenue ?? "",
-      primary_goal: existingProfile.primary_goal ?? "",
-      product: existingProfile.product ?? "",
-      niche: existingProfile.niche ?? "",
-      average_price: existingProfile.average_price ?? "",
       product_cost: existingProfile.product_cost ?? "",
       unique_selling_point: existingProfile.unique_selling_point ?? "",
       target_customer: existingProfile.target_customer ?? "",
       customer_problem: existingProfile.customer_problem ?? "",
       purchase_reason: existingProfile.purchase_reason ?? "",
       main_objection: existingProfile.main_objection ?? "",
-      acquisition_channels: existingProfile.acquisition_channels ?? [],
       marketing_budget: existingProfile.marketing_budget ?? "",
       content_types: existingProfile.content_types ?? [],
       revenue_goal: existingProfile.revenue_goal ?? "",
       goal_90_days: existingProfile.goal_90_days ?? "",
-      main_problem: existingProfile.main_problem ?? "",
       desired_result: existingProfile.desired_result ?? "",
     });
     if (searchParams.get("edit") === "true") setScreen(0);
@@ -85,12 +85,13 @@ export default function Onboarding() {
             {firstName ? `Let's build your AI system, ${firstName}.` : "Let's build your AI E-commerce System."}
           </h1>
           <p className="mt-4 text-muted-foreground">
-            Answer a few questions about your business. We'll personalize your workspace around your goals — takes
-            about 3 minutes.
+            A quick quiz about your business — mostly just clicking, takes about a minute. We'll build your
+            personalized workspace from your answers.
           </p>
           <Button size="lg" className="mt-8" onClick={() => setScreen(0)}>
             Start <ArrowRight className="h-4 w-4" />
           </Button>
+          {!user && <p className="mt-4 text-xs text-muted-foreground">No account needed yet — that comes after.</p>}
         </div>
       </div>
     );
@@ -109,9 +110,18 @@ export default function Onboarding() {
       return;
     }
 
+    const parsed = businessProfileSchema.parse(form.getValues());
+
+    if (!user) {
+      // Not signed in yet: hold the answers locally and gate on account
+      // creation — the quiz itself never required an account.
+      savePendingProfile(parsed);
+      navigate("/signup?fromQuiz=true");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const parsed = businessProfileSchema.parse(form.getValues());
       await saveBusinessProfile.mutateAsync({
         business_type: parsed.business_type,
         target_country: parsed.target_country,

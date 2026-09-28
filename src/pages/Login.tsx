@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { getPendingProfile, clearPendingProfile } from "@/lib/pendingBusinessProfile";
 import { toast } from "sonner";
 
 const loginSchema = z.object({
@@ -22,7 +24,9 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { signIn } = useAuth();
+  const fromQuiz = searchParams.get("fromQuiz") === "true";
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -32,13 +36,30 @@ export default function Login() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     const { error } = await signIn(data.email, data.password);
-    setIsLoading(false);
 
     if (error) {
+      setIsLoading(false);
       toast.error(error);
       return;
     }
 
+    // Quiz answers taken before logging in (e.g. an existing user retook the
+    // quiz signed out, or had to confirm their email first) get saved now.
+    const pending = getPendingProfile();
+    if (pending) {
+      const { data: sessionData } = await supabase.auth.getUser();
+      if (sessionData.user) {
+        const { error: saveError } = await supabase
+          .from("business_profiles")
+          .upsert({ ...pending, user_id: sessionData.user.id }, { onConflict: "user_id" });
+        if (!saveError) {
+          await supabase.from("profiles").update({ onboarding_completed: true }).eq("user_id", sessionData.user.id);
+          clearPendingProfile();
+        }
+      }
+    }
+
+    setIsLoading(false);
     toast.success("Welcome back!");
     const redirectTo = (location.state as { from?: string } | null)?.from ?? "/dashboard";
     navigate(redirectTo);
@@ -51,7 +72,7 @@ export default function Login() {
       footer={
         <>
           New here?{" "}
-          <Link to="/signup" className="text-primary font-medium hover:underline">
+          <Link to={fromQuiz ? "/signup?fromQuiz=true" : "/signup"} className="text-primary font-medium hover:underline">
             Build my system
           </Link>
         </>

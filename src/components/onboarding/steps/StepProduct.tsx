@@ -1,7 +1,8 @@
 import type { UseFormReturn } from "react-hook-form";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { RadioCardGroup } from "@/components/onboarding/RadioCardGroup";
+import { NICHES, PRICE_RANGES } from "@/config/questionnaire";
 import type { BusinessProfileFormData } from "@/components/onboarding/schema";
 
 export function StepProduct({ form }: { form: UseFormReturn<BusinessProfileFormData> }) {
@@ -9,66 +10,38 @@ export function StepProduct({ form }: { form: UseFormReturn<BusinessProfileFormD
     <div className="space-y-6">
       <FormField
         control={form.control}
-        name="product"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>What do you sell?</FormLabel>
-            <FormControl>
-              <Input placeholder="e.g. Cat water fountains" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
         name="niche"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>What niche are you in?</FormLabel>
+            <FormLabel>What niche are you in (or interested in)?</FormLabel>
             <FormControl>
-              <Input placeholder="e.g. Pet accessories" {...field} />
+              <RadioCardGroup options={NICHES} value={field.value} onChange={field.onChange} columns={3} />
             </FormControl>
             <FormMessage />
           </FormItem>
         )}
       />
-      <div className="grid grid-cols-2 gap-4">
-        <FormField
-          control={form.control}
-          name="average_price"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Average selling price</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g. €39" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="product_cost"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Approximate cost per unit</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g. €9" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
       <FormField
         control={form.control}
-        name="unique_selling_point"
+        name="product"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>What makes your product different?</FormLabel>
+            <FormLabel>What do you sell? <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
             <FormControl>
-              <Textarea placeholder="e.g. Filters water continuously and looks good on a countertop" {...field} />
+              <Input placeholder="e.g. Cat water fountains — leave blank if you're not sure yet" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="average_price"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>What price range are you thinking? <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+            <FormControl>
+              <RadioCardGroup options={PRICE_RANGES} value={field.value} onChange={field.onChange} columns={3} />
             </FormControl>
             <FormMessage />
           </FormItem>

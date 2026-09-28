@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { getPendingProfile, clearPendingProfile } from "@/lib/pendingBusinessProfile";
 import { toast } from "sonner";
 
 const signupSchema = z.object({
@@ -22,7 +24,9 @@ type SignupFormData = z.infer<typeof signupSchema>;
 export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signUp } = useAuth();
+  const fromQuiz = searchParams.get("fromQuiz") === "true";
 
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -32,25 +36,57 @@ export default function Signup() {
   const onSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
     const { error } = await signUp(data.email, data.password, data.firstName);
-    setIsLoading(false);
 
     if (error) {
+      setIsLoading(false);
       toast.error(error);
       return;
     }
 
+    // Quiz answers taken before creating an account are saved here — fetch
+    // the fresh session directly rather than trusting this component's
+    // (possibly stale) auth state right after signUp() resolves.
+    const pending = getPendingProfile();
+    const { data: sessionData } = await supabase.auth.getUser();
+    setIsLoading(false);
+
+    if (pending && sessionData.user) {
+      const { error: saveError } = await supabase
+        .from("business_profiles")
+        .upsert({ ...pending, user_id: sessionData.user.id }, { onConflict: "user_id" });
+      if (!saveError) {
+        await supabase.from("profiles").update({ onboarding_completed: true }).eq("user_id", sessionData.user.id);
+        clearPendingProfile();
+        toast.success("Account created — your system is ready!");
+        navigate("/onboarding/complete");
+        return;
+      }
+    }
+
+    if (pending && !sessionData.user) {
+      // Email confirmation is required before a session exists. The answers
+      // stay saved locally and will be applied the moment they log in.
+      toast.success("Check your email to confirm your account, then log in.");
+      navigate("/login");
+      return;
+    }
+
     toast.success("Account created!");
-    navigate("/onboarding");
+    navigate(fromQuiz ? "/dashboard" : "/onboarding");
   };
 
   return (
     <AuthCard
-      title="Build my system"
-      description="Create your account, then tell us about your business."
+      title={fromQuiz ? "Almost there" : "Build my system"}
+      description={
+        fromQuiz
+          ? "Create your account to save your answers and see your personalized system."
+          : "Create your account, then tell us about your business."
+      }
       footer={
         <>
           Already have an account?{" "}
-          <Link to="/login" className="text-primary font-medium hover:underline">
+          <Link to={fromQuiz ? "/login?fromQuiz=true" : "/login"} className="text-primary font-medium hover:underline">
             Log in
           </Link>
         </>

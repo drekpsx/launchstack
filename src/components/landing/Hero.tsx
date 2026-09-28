@@ -25,7 +25,7 @@ export function Hero() {
             <p className="mt-6 text-lg text-muted-foreground max-w-xl leading-relaxed">{APP_DESCRIPTION}</p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <Button size="lg" asChild className="text-base">
-                <Link to="/signup">
+                <Link to="/onboarding">
                   Build My System <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -33,7 +33,7 @@ export function Hero() {
                 <Link to="/#how-it-works">See how it works</Link>
               </Button>
             </div>
-            <p className="mt-4 text-xs text-muted-foreground">Free to start. No credit card required.</p>
+            <p className="mt-4 text-xs text-muted-foreground">Takes about a minute. No account needed to start.</p>
           </div>
 
           <div className="relative">

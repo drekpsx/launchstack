@@ -14,7 +14,7 @@ export function FinalCTA() {
             It takes less than five minutes to go from "no product yet" to a fully personalized workspace.
           </p>
           <Button size="lg" variant="secondary" asChild className="mt-8 text-base">
-            <Link to="/signup">
+            <Link to="/onboarding">
               Build My System <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>

@@ -46,7 +46,7 @@ export function PricingSection({ compact = false }: { compact?: boolean }) {
                 ))}
               </ul>
               <Button asChild className="mt-8" variant={plan.id === "pro" ? "default" : "outline"}>
-                <Link to="/signup">{plan.id === "pro" ? "Upgrade to Pro" : "Start for free"}</Link>
+                <Link to="/onboarding">{plan.id === "pro" ? "Upgrade to Pro" : "Start for free"}</Link>
               </Button>
             </Card>
           ))}

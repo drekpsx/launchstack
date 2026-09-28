@@ -73,18 +73,36 @@ export const CONTENT_TYPES: Option[] = [
   { value: "none", label: "None yet" },
 ];
 
+export const NICHES: Option[] = [
+  { value: "fashion", label: "Fashion & Clothing" },
+  { value: "beauty", label: "Beauty & Skincare" },
+  { value: "pets", label: "Pets" },
+  { value: "home", label: "Home & Kitchen" },
+  { value: "fitness", label: "Fitness & Health" },
+  { value: "tech", label: "Tech & Gadgets" },
+  { value: "baby_kids", label: "Baby & Kids" },
+  { value: "jewelry", label: "Jewelry & Accessories" },
+  { value: "outdoor", label: "Outdoor & Sports" },
+  { value: "other", label: "Other" },
+  { value: "not_sure", label: "Not sure yet" },
+];
+
+export const PRICE_RANGES: Option[] = [
+  { value: "under_20", label: "Under €20" },
+  { value: "20_50", label: "€20 – €50" },
+  { value: "50_100", label: "€50 – €100" },
+  { value: "100_plus", label: "€100+" },
+  { value: "not_sure", label: "Not sure yet" },
+];
+
 export const MAIN_PROBLEMS: Option[] = [
-  { value: "product", label: "Product" },
-  { value: "acquisition", label: "Acquisition" },
-  { value: "ads", label: "Advertising" },
-  { value: "conversion", label: "Conversion" },
-  { value: "content_creation", label: "Content creation" },
-  { value: "seo", label: "SEO" },
-  { value: "email", label: "Email" },
-  { value: "offer", label: "Offer" },
-  { value: "positioning", label: "Positioning" },
-  { value: "organization", label: "Organization" },
-  { value: "unknown", label: "I don't know" },
+  { value: "product", label: "Finding the right product" },
+  { value: "acquisition", label: "Getting traffic / customers" },
+  { value: "conversion", label: "Getting people to buy" },
+  { value: "content_creation", label: "Creating content" },
+  { value: "offer", label: "My offer / pricing" },
+  { value: "positioning", label: "Standing out from competitors" },
+  { value: "unknown", label: "I don't know yet" },
 ];
 
 export function labelFor(options: Option[], value: string | null | undefined): string {

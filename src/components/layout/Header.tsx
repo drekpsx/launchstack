@@ -53,7 +53,7 @@ export function Header() {
                 <Link to="/login">Log in</Link>
               </Button>
               <Button asChild className="hidden sm:inline-flex">
-                <Link to="/signup">Build My System</Link>
+                <Link to="/onboarding">Build My System</Link>
               </Button>
             </>
           )}
@@ -96,7 +96,7 @@ export function Header() {
                     </Link>
                   </Button>
                   <Button asChild>
-                    <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
+                    <Link to="/onboarding" onClick={() => setMobileMenuOpen(false)}>
                       Build My System
                     </Link>
                   </Button>

@@ -58,15 +58,8 @@ const App = () => (
             <Route path="/legal/terms" element={<Terms />} />
             <Route path="/legal/refund" element={<Refund />} />
 
-            {/* Onboarding */}
-            <Route
-              path="/onboarding"
-              element={
-                <ProtectedRoute>
-                  <Onboarding />
-                </ProtectedRoute>
-              }
-            />
+            {/* Onboarding — the quiz itself is public; only its results screen needs an account */}
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route
               path="/onboarding/complete"
               element={
